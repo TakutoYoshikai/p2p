@@ -138,8 +138,8 @@ function half(array) {
 
 
 function joinNetwork() {
-	let url = "http://localhost:8000";
-	getPeers(url, 3)
+	let defaultUrl = "http://localhost:8000";
+	getPeers(defaultUrl, 3)
 	.then(function(ps) {
 		peers = peers.concat(ps);
 		peers = peers.filter(onlyUnique);
@@ -155,9 +155,9 @@ function joinNetwork() {
 				});
 		});
 	})
-	registerSelf(url)
+	registerSelf(defaultUrl)
 	.then(function() {
-		peers.push(url);
+		peers.push(defaultUrl);
 	});
 }
 
