@@ -7,9 +7,8 @@ let multer = require("multer");
 let multiparty = require("multiparty");
 let fs = require("fs");
 let restler = require("restler");
-let distributedFileName = [
-
-];
+let distributedFileName = [];
+let watchers = [];
 let storage = multer.diskStorage({
 	destination: function (req, file, cb) {
 		cb(null, "./files/" + myPort);
@@ -55,6 +54,41 @@ function half(array) {
 
 function onlyUnique(value, index, self) { 
 	return self.indexOf(value) == index;
+}
+
+function appendWatcher(watcherAddress) {
+	let sameAddress = watchers.filter(function(watcher) {
+		if (watcherAddress == watcher.address) {
+			return true;
+		}
+		return false;
+	});
+
+	if (sameAddress.length == 0) {
+		watchers.push({
+			address: watcherAddress,
+			timelimit: 20
+		});
+	}
+}
+
+function removeWatcher(watcherAddress) {
+	watchers = watchers.filter(function(watcher) {
+		if (watcher.address == watcherAddress) {
+			return false;
+		}
+		return true;
+	});
+}
+
+function checkWatchers() {
+	watchers.forEach(function(watcher) {
+		watcher.timelimit--;
+		watcher.timelimit--;
+		if (watcher.timelimit <= 0) {
+			removeWatcher(watcher.address);
+		}
+	});
 }
 
 
@@ -108,6 +142,39 @@ class P2P {
 			}
 			//ここのステータスコードは適当
 			res.status(400).send();
+		});
+
+		app.post("/watch", function(req, res) {
+			let watcherUrl = req.body.watcher;
+			let targetWatchers = watchers.filter(function(watcher) {
+				if (watcher.address == watcherUrl) {
+					return true;
+				}
+				return false;
+			});
+			if (targetWatchers.length == 0) {
+				if (watchers.length >= 10) {
+					let removed = selectRandomValues(watchers, 1)[0].address;
+					self.release(removed);
+					removeWatcher(removed);
+				}
+				appendWatcher(watcherUrl);
+			} else {
+				targetWatchers[0].timelimit = 20;
+			}
+			res.status(200).send();
+		});
+
+		app.post("/release", function(req, res) {
+			console.log("release");
+			let target = req.body.me;
+			let index = self.peers.indexOf(target);
+			if (index == -1) {
+				res.status(400).send();
+				return;
+			}
+			self.peers.splice(index, 1);
+			res.status(200).send();
 		});
 
 		app.get("/getData", function(req, res) {
@@ -168,6 +235,27 @@ class P2P {
 			});
 		});
 	}
+	//自分を見ているノードに自分の事を忘れさせる
+	release(url) {
+		console.log("call release");
+		let self = this;
+		return new Promise(function(resolve, reject) {
+			request.post({
+				url: url + "/release",
+				json: true,
+				headers: {"Content-Type": "application/json"},
+				body: {
+					me: self.url
+				}
+			}, function(error, response, body) {
+				if (!error && response.statusCode == 200) {
+					resolve();
+					return;
+				}
+				reject();
+			});
+		});
+	}
 	joinNetwork() {
 		let defaultUrl = "http://localhost:8000";
 		let self = this;
@@ -204,6 +292,7 @@ class P2P {
 				}
 			}, function(error, response, body) {
 				if (!error && response.statusCode == 201) {
+					appendWatcher(url);
 					resolve();
 					return;
 				}
@@ -227,13 +316,37 @@ class P2P {
 			});
 		});
 	}
+	watch(url) {
+		let self = this;
+		return new Promise(function(resolve, reject) {
+			request.post({
+				url: url + "/watch",
+				json: true,
+				headers: {"Content-Type": "application/json"},
+				body: {
+					watcher: self.url
+				}
+			}, function(error, response, body) {
+				if (!error && response.statusCode == 200) {
+					resolve();
+					return;
+				}
+				reject();
+			});
+		});
+	}
 
 	start() {
 		let self = this;
 		app.listen(self.port, function() {
 			console.log("Peerが起動しました");
 			console.log("ポート: " + self.port);
-		})
+		});
+		setInterval(function() {
+			self.peers.forEach(function(peer) {
+				self.watch(peer);
+			});
+		}, 10000);
 	}
 }
 
@@ -244,3 +357,4 @@ if (p2p.port != 8000) {
 	p2p.joinNetwork();
 }
 
+setInterval(checkWatchers, 2000);

@@ -1,18 +1,31 @@
 let fs = require("fs");
-let text = fs.readFileSync("log.log").toString();
+let text = fs.readFileSync("log5.log").toString();
 
 let strings = text.split(",");
 let numbers = strings.map(function(str) {
 	return parseInt(str);
 });
 let result = [];
-for (var i = 0; i < 100; i++) {
+for (var i = 0; i < 50; i++) {
 	result.push(0);
 }
 
 numbers.forEach(function(number) {
 	result[number] = result[number] + 1;
 });
+
+console.log("最高" + result.reduce(function(res, val) {
+	if (res > val) {
+		return val;
+	}
+	return res;
+}, 100000));
+console.log("最低" + result.reduce(function(res, val) {
+	if (res < val) {
+		return val;
+	}
+	return res;
+}, 0));
 
 let total = result.reduce(function(res, val) {
 	return res + val;

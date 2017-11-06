@@ -1,6 +1,6 @@
 #!/bin/sh
 
-for i in `seq 1 150`; do
+for i in `seq 0 199`; do
 	sleep 1.5s;
-	node main.js `expr 7999 + $i` &
+	node p2p.js `expr 8000 + $i` &
 done
