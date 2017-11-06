@@ -192,9 +192,18 @@ class P2P {
 				setTimeout(function(){
 					self.broadcastFile(req.file.originalname, self.peers);
 				}, 1000);
-				console.log(self.port + "が画像を保存しました");
+				console.log(self.port + "がファイルを保存しました");
 				res.status(200).send();
 			});
+		});
+	}
+
+	removePeer(target) {
+		this.peers = this.peers.filter(function(peer) {
+			if (target == peer) {
+				return false;
+			}
+			return true;
 		});
 	}
 
@@ -331,6 +340,7 @@ class P2P {
 					resolve();
 					return;
 				}
+				self.removePeer(url);
 				reject();
 			});
 		});
