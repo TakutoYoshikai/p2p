@@ -174,6 +174,14 @@ class P2P {
 				return;
 			}
 			self.peers.splice(index, 1);
+			if (self.peers.length > 0 && self.peers.length < 5) {
+				self.getPeers(selectRandomValues(self.peers, 1)[0], 5)
+					.then(function(peers) {
+						peers.forEach(function(peer) {
+							self.appendPeer(peer);
+						});
+					});
+			}
 			res.status(200).send();
 		});
 
@@ -199,12 +207,21 @@ class P2P {
 	}
 
 	removePeer(target) {
+		let self = this;
 		this.peers = this.peers.filter(function(peer) {
 			if (target == peer) {
 				return false;
 			}
 			return true;
 		});
+		if (self.peers.length > 0 && self.peers.length < 5) {
+			self.getPeers(selectRandomValues(self.peers, 1)[0], 5)
+				.then(function(peers) {
+					peers.forEach(function(peer) {
+						self.appendPeer(peer);
+					});
+				});
+		}
 	}
 
 	sendData(data) {
@@ -214,7 +231,7 @@ class P2P {
 				url: peer + "/data?data=" + data
 			}, function(error, response, body) {
 				if (!error && response.statusCode == 200) {
-					console.log(self.port + "が " + peer + "に" + data + "を送りました");
+					console.log(self.url + "が " + peer + "に" + data + "を送りました");
 				}
 			});
 		});
@@ -264,6 +281,12 @@ class P2P {
 				reject();
 			});
 		});
+	}
+
+	appendPeer(peer) {
+		if (this.peers.indexOf(peer) == -1) {
+			this.peers.push(peer);
+		}
 	}
 	joinNetwork() {
 		let defaultUrl = "http://localhost:8000";
