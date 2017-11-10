@@ -7,6 +7,7 @@ let multer = require("multer");
 let multiparty = require("multiparty");
 let fs = require("fs");
 let restler = require("restler");
+let exec = require("child_process").exec;
 let distributedFileName = [];
 let storage = multer.diskStorage({
 	destination: function (req, file, cb) {
@@ -59,14 +60,14 @@ function onlyUnique(value, index, self) {
 
 
 class P2P {
-	init(port) {
+	init(host, port) {
 		this.peers = [];
 		this.watchers = [];
 		this.port = port;
-		this.url = "http://localhost:" + port;
+		this.url = "http://" + host + ":" + port;
 		this.data = null;
 	}
-	constructor(port) {
+	constructor(host, port) {
 		this.init(port);
 		this.setupServer();
 	}
@@ -256,7 +257,7 @@ class P2P {
 		}
 	}
 	joinNetwork() {
-		let defaultUrl = "http://localhost:8000";
+		let defaultUrl = "http://160.16.238.230:8000";
 		let self = this;
 		self.getPeers(defaultUrl, 3)
 			.then(function(peers) {
@@ -386,9 +387,13 @@ class P2P {
 	}
 }
 
-let p2p = new P2P(myPort);
-p2p.start();
+exec('curl -s ifconfig.me', (err, stdout, stderr) => {
+	if (err) { console.log(err); }
+	let host = stdout.replace(/\n/g, "");
+	let p2p = new P2P(host, 8000);
+	p2p.start();
 
-if (p2p.port != 8000) {
-	p2p.joinNetwork();
-}
+	if (host != "160.16.238.230") {
+			p2p.joinNetwork();
+	}
+});
