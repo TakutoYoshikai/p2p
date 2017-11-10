@@ -68,7 +68,7 @@ class P2P {
 		this.data = null;
 	}
 	constructor(host, port) {
-		this.init(port);
+		this.init(host, port);
 		this.setupServer();
 	}
 
