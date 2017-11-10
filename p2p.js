@@ -2,7 +2,6 @@ let express = require("express");
 let app = express();
 let bodyParser = require("body-parser");
 let request = require("request");
-let myPort = parseInt(process.argv[2]);
 let multer = require("multer");
 let multiparty = require("multiparty");
 let fs = require("fs");
@@ -11,7 +10,7 @@ let exec = require("child_process").exec;
 let distributedFileName = [];
 let storage = multer.diskStorage({
 	destination: function (req, file, cb) {
-		cb(null, "./files/" + myPort);
+		cb(null, "./files");
 	},
 	filename: function(req, file, cb) {
 		cb(null, file.originalname);
@@ -302,7 +301,7 @@ class P2P {
 	}
 	broadcastFile(fileName) {
 		let self = this;
-		let path = "./files/" + myPort + "/" + fileName;
+		let path = "./files/" + fileName;
 		fs.stat(path, function(err, stats) {
 			let file = restler.file(path, null, stats.size, null, "text/plain");
 			self.peers.forEach(function(peer) {
