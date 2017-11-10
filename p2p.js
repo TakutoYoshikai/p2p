@@ -8,7 +8,6 @@ let multiparty = require("multiparty");
 let fs = require("fs");
 let restler = require("restler");
 let distributedFileName = [];
-let watchers = [];
 let storage = multer.diskStorage({
 	destination: function (req, file, cb) {
 		cb(null, "./files/" + myPort);
@@ -56,45 +55,13 @@ function onlyUnique(value, index, self) {
 	return self.indexOf(value) == index;
 }
 
-function appendWatcher(watcherAddress) {
-	let sameAddress = watchers.filter(function(watcher) {
-		if (watcherAddress == watcher.address) {
-			return true;
-		}
-		return false;
-	});
 
-	if (sameAddress.length == 0) {
-		watchers.push({
-			address: watcherAddress,
-			timelimit: 20
-		});
-	}
-}
-
-function removeWatcher(watcherAddress) {
-	watchers = watchers.filter(function(watcher) {
-		if (watcher.address == watcherAddress) {
-			return false;
-		}
-		return true;
-	});
-}
-
-function checkWatchers() {
-	watchers.forEach(function(watcher) {
-		watcher.timelimit--;
-		watcher.timelimit--;
-		if (watcher.timelimit <= 0) {
-			removeWatcher(watcher.address);
-		}
-	});
-}
 
 
 class P2P {
 	init(port) {
 		this.peers = [];
+		this.watchers = [];
 		this.port = port;
 		this.url = "http://localhost:" + port;
 		this.data = null;
@@ -146,19 +113,19 @@ class P2P {
 
 		app.post("/watch", function(req, res) {
 			let watcherUrl = req.body.watcher;
-			let targetWatchers = watchers.filter(function(watcher) {
+			let targetWatchers = self.watchers.filter(function(watcher) {
 				if (watcher.address == watcherUrl) {
 					return true;
 				}
 				return false;
 			});
 			if (targetWatchers.length == 0) {
-				if (watchers.length >= 10) {
-					let removed = selectRandomValues(watchers, 1)[0].address;
+				if (self.watchers.length >= 10) {
+					let removed = selectRandomValues(self.watchers, 1)[0].address;
 					self.release(removed);
-					removeWatcher(removed);
+					self.removeWatcher(removed);
 				}
-				appendWatcher(watcherUrl);
+				self.appendWatcher(watcherUrl);
 			} else {
 				targetWatchers[0].timelimit = 20;
 			}
@@ -324,7 +291,7 @@ class P2P {
 				}
 			}, function(error, response, body) {
 				if (!error && response.statusCode == 201) {
-					appendWatcher(url);
+					self.appendWatcher(url);
 					resolve();
 					return;
 				}
@@ -368,7 +335,40 @@ class P2P {
 			});
 		});
 	}
-
+	appendWatcher(watcherAddress) {
+		let self = this;
+		let sameAddress = self.watchers.filter(function(watcher) {
+			if (watcherAddress == watcher.address) {
+				return true;
+			}
+			return false;
+		});
+		if (sameAddress.length == 0) {
+			self.watchers.push({
+				address: watcherAddress,
+				timelimit: 20
+			});
+		}
+	}
+	removeWatcher(watcherAddress) {
+		let self = this;
+		self.watchers = self.watchers.filter(function(watcher) {
+			if (watcher.address == watcherAddress) {
+				return false;
+			}
+			return true;
+		});
+	}
+	checkWatchers() {
+		let self = this;
+		self.watchers.forEach(function(watcher) {
+			watcher.timelimit--;
+			watcher.timelimit--;
+			if (watcher.timelimit <= 0) {
+				self.removeWatcher(watcher.address);
+			}
+		});
+	}
 	start() {
 		let self = this;
 		app.listen(self.port, function() {
@@ -380,6 +380,9 @@ class P2P {
 				self.watch(peer);
 			});
 		}, 10000);
+		setInterval(function() {
+			self.checkWatchers();
+		}, 2000);
 	}
 }
 
@@ -389,5 +392,3 @@ p2p.start();
 if (p2p.port != 8000) {
 	p2p.joinNetwork();
 }
-
-setInterval(checkWatchers, 2000);
