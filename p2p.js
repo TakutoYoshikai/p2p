@@ -7,6 +7,10 @@ let multiparty = require("multiparty");
 let fs = require("fs");
 let restler = require("restler");
 let exec = require("child_process").exec;
+let myPort = 8000;
+if (process.argv.length == 3) {
+	myPort = parseInt(process.argv[2]);
+}
 let distributedFileName = [];
 let storage = multer.diskStorage({
 	destination: function (req, file, cb) {
@@ -389,7 +393,7 @@ class P2P {
 exec('curl -s ifconfig.me', (err, stdout, stderr) => {
 	if (err) { console.log(err); }
 	let host = stdout.replace(/\n/g, "");
-	let p2p = new P2P(host, 8000);
+	let p2p = new P2P(host, myPort);
 	p2p.start();
 
 	if (host != "160.16.238.230") {
